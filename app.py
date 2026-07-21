@@ -2,7 +2,7 @@
 Cattle Weight Estimation — Streamlit Web App
 ------------------------------------------------------------------------------
 Workflow:
-  1. User enters a Tag ID and uploads a SIDE-VIEW photo of the animal
+  1. User enters a Tag ID and uploads or captures a SIDE-VIEW photo of the animal
      (calibration sticker must be visible).
   2. Segmentation model (best.pt) locates the cow + sticker for calibration.
   3. Keypoint model (best_model_side.pth) locates side-view keypoints.
@@ -66,35 +66,47 @@ CUSTOM_CSS = f"""
     }}
 
     /* --------------------------------------------------------------------
+       Camera Input Landscape Aspect Ratio
+       Forces the video viewport container to stay in 16:9 Landscape mode
+       -------------------------------------------------------------------- */
+    [data-testid="stCameraInput"] video,
+    [data-testid="stCameraInput"] canvas {{
+        aspect-ratio: 16 / 9 !important;
+        object-fit: cover !important;
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 12px;
+    }}
+
+    /* --------------------------------------------------------------------
        Sidebar background — pinned on every wrapper Streamlit might use for
-       the sidebar panel, with a hard fallback color (not just the CSS
-       variable) so it can never resolve to the browser's transparent
-       default. On mobile the sidebar renders as a sliding overlay drawer;
-       if only the outer <section> got a background (and not its inner
-       content wrapper), the drawer's empty space shows the page behind it
-       through, which is the "transparent sidebar" bug.
+       the sidebar panel.
        -------------------------------------------------------------------- */
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"] > div,
-    section[data-testid="stSidebar"] [data-testid="stSidebarContent"],
-    section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
-        background-color: var(--secondary-background-color, #F4F3FA) !important;
+    [data-testid="stSidebarContent"],
+    [data-testid="stSidebarUserContent"],
+    [data-testid="stSidebarHeader"],
+    [data-testid="stSidebarNav"] {{
+        background-color: var(--secondary-background-color) !important;
         opacity: 1 !important;
     }}
     section[data-testid="stSidebar"] {{
         border-right: 1px solid rgba(128, 128, 128, 0.2);
     }}
-    /* Make sure the drawer covers the full scrollable height on mobile,
-       not just the initial viewport, so nothing peeks out below the fold. */
+
+    /* Mobile drawer sizing — ensures full overlay coverage with shadow */
     @media (max-width: 767px) {{
         section[data-testid="stSidebar"] {{
-            min-height: 100vh !important;
-            min-height: 100dvh !important;
+            width: 85vw !important;
+            max-width: 85vw !important;
+            min-width: 280px !important;
+            height: 100% !important;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.25) !important;
         }}
     }}
 
-    /* Sidebar logo — fixed, modest size on every device, left-aligned so
-       it lines up with the rest of the sidebar content (button, caption). */
+    /* Sidebar logo — fixed, modest size on every device, left-aligned */
     section[data-testid="stSidebar"] img {{
         max-width: 150px !important;
         width: 100% !important;
@@ -102,15 +114,11 @@ CUSTOM_CSS = f"""
         margin: 0 !important;
         display: block;
     }}
-    /* The element wrapping st.image also gets centered by Streamlit by
-       default — force it back to flush-left so it matches the button. */
     section[data-testid="stSidebar"] [data-testid="stImage"] {{
         display: flex !important;
         justify-content: flex-start !important;
     }}
-    /* Sidebar buttons — capped to same width as the logo, regardless of
-       sidebar width, and left-aligned (not centered) so it lines up with
-       the logo above it instead of floating in the middle. */
+    /* Sidebar buttons */
     section[data-testid="stSidebar"] div.stButton {{
         display: flex !important;
         justify-content: flex-start !important;
@@ -124,7 +132,7 @@ CUSTOM_CSS = f"""
         border-radius: 6px;
     }}
 
-    /* Lock sidebar width ONLY on Desktop screens (>= 768px) so mobile drawer isn't cut off */
+    /* Lock sidebar width ONLY on Desktop screens (>= 768px) */
     @media (min-width: 768px) {{
         section[data-testid="stSidebar"] {{
             min-width: 260px !important;
@@ -322,7 +330,7 @@ def get_models():
 # Helpers
 # ==============================================================================
 def reset_form():
-    """Fully clears Tag ID + uploaded image + current result, then scrolls to top."""
+    """Fully clears Tag ID + uploaded/captured image + current result, then scrolls to top."""
     st.session_state.form_version += 1
     st.session_state.estimation_done = False
     st.session_state.last_annotated_img = None
@@ -463,7 +471,7 @@ with st.sidebar:
 # ==============================================================================
 st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
 st.markdown("<h1>🐄 Cattle Weight Estimator</h1>", unsafe_allow_html=True)
-st.caption("Upload a side-view image to estimate live body weight from Body Length and Heart Girth.")
+st.caption("Upload or capture a side-view image to estimate live body weight from Body Length and Heart Girth.")
 
 col_form, col_result = st.columns([1, 1.2], gap="large")
 
@@ -476,8 +484,8 @@ with col_form:
     )
 
     st.subheader("2. Side-View Image")
-    
-    tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo"])
+
+    tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo (Landscape)"])
 
     uploaded_file = None
     camera_file = None
@@ -491,7 +499,7 @@ with col_form:
 
     with tab_camera:
         camera_file = st.camera_input(
-            "Capture side-view photo (Hold device horizontally for landscape)",
+            "Capture side-view photo (Hold device in landscape)",
             key=f"camera_{st.session_state.form_version}",
         )
 
@@ -524,7 +532,7 @@ if estimate_clicked:
             if img_bgr is None:
                 st.error("Could not read the provided image. Please try again.")
             else:
-                # Automatically convert portrait images (height > width) to landscape format
+                # Rotate image if captured in portrait mode
                 h, w = img_bgr.shape[:2]
                 if h > w:
                     img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_CLOCKWISE)
@@ -620,7 +628,7 @@ with col_result:
             if st.button("🔄 New Estimation", use_container_width=True):
                 reset_form()
     else:
-        st.info("Enter a Tag ID, upload a side-view image, then click **Estimate Weight**.")
+        st.info("Enter a Tag ID, upload/capture a side-view image, then click **Estimate Weight**.")
 
 st.markdown("---")
 st.caption("Weight formula: (Heart Girth² × Body Length) / 10840  |  Calibration via sticker of known size in the image.")
