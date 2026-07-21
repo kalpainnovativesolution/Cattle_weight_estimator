@@ -60,13 +60,13 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
-    /* Heading typography */
+    /* Use Streamlit CSS variables so colors adapt automatically to dark & light modes */
     h1, h2, h3 {{
         color: var(--text-color);
     }}
 
     /* --------------------------------------------------------------------
-       Camera Input Landscape Aspect Ratio Enforcement
+       Camera Input Landscape Aspect Ratio
        Forces the video viewport container to stay in 16:9 Landscape mode
        -------------------------------------------------------------------- */
     [data-testid="stCameraInput"] video,
@@ -79,8 +79,8 @@ CUSTOM_CSS = f"""
     }}
 
     /* --------------------------------------------------------------------
-       Sidebar background — Solid & Adaptive across Light & Dark modes
-       Applies to all internal drawer wrappers so no transparent gap shows.
+       Sidebar background — pinned on every wrapper Streamlit might use for
+       the sidebar panel.
        -------------------------------------------------------------------- */
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"] > div,
@@ -91,7 +91,6 @@ CUSTOM_CSS = f"""
         background-color: var(--secondary-background-color) !important;
         opacity: 1 !important;
     }}
-
     section[data-testid="stSidebar"] {{
         border-right: 1px solid rgba(128, 128, 128, 0.2);
     }}
@@ -107,16 +106,7 @@ CUSTOM_CSS = f"""
         }}
     }}
 
-    /* Fixed width for Desktop screens only (>= 768px) */
-    @media (min-width: 768px) {{
-        section[data-testid="stSidebar"] {{
-            min-width: 260px !important;
-            max-width: 260px !important;
-            width: 260px !important;
-        }}
-    }}
-
-    /* Sidebar logo */
+    /* Sidebar logo — fixed, modest size on every device, left-aligned */
     section[data-testid="stSidebar"] img {{
         max-width: 150px !important;
         width: 100% !important;
@@ -124,18 +114,15 @@ CUSTOM_CSS = f"""
         margin: 0 !important;
         display: block;
     }}
-
     section[data-testid="stSidebar"] [data-testid="stImage"] {{
         display: flex !important;
         justify-content: flex-start !important;
     }}
-
     /* Sidebar buttons */
     section[data-testid="stSidebar"] div.stButton {{
         display: flex !important;
         justify-content: flex-start !important;
     }}
-
     section[data-testid="stSidebar"] div.stButton > button {{
         max-width: 150px !important;
         width: 100% !important;
@@ -145,17 +132,23 @@ CUSTOM_CSS = f"""
         border-radius: 6px;
     }}
 
+    /* Lock sidebar width ONLY on Desktop screens (>= 768px) */
+    @media (min-width: 768px) {{
+        section[data-testid="stSidebar"] {{
+            min-width: 260px !important;
+            max-width: 260px !important;
+            width: 260px !important;
+        }}
+    }}
+
     [data-testid="stSidebarResizeHandle"] {{
         display: none !important;
         pointer-events: none !important;
         width: 0 !important;
     }}
-
     section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] p {{
         font-size: 12px;
     }}
-
-    /* Primary buttons */
     div.stButton > button {{
         background-color: {PRIMARY};
         color: white;
@@ -164,13 +157,10 @@ CUSTOM_CSS = f"""
         padding: 0.6em 1.4em;
         font-weight: 600;
     }}
-
     div.stButton > button:hover {{
         background-color: #201d52;
         color: white;
     }}
-
-    /* Download buttons */
     div.stDownloadButton > button {{
         background-color: transparent;
         color: var(--text-color);
@@ -178,13 +168,10 @@ CUSTOM_CSS = f"""
         border-radius: 8px;
         font-weight: 600;
     }}
-
     div.stDownloadButton > button:hover {{
         background-color: {PRIMARY};
         color: white;
     }}
-
-    /* Result cards */
     .weight-card {{
         background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
         color: #FFFFFF !important;
@@ -194,14 +181,12 @@ CUSTOM_CSS = f"""
         margin-top: 10px;
         margin-bottom: 10px;
     }}
-
     .weight-card .value {{
         font-size: 52px;
         font-weight: 800;
         line-height: 1.1;
         color: #FFFFFF !important;
     }}
-
     .weight-card .label {{
         font-size: 15px;
         letter-spacing: 1px;
@@ -209,7 +194,6 @@ CUSTOM_CSS = f"""
         opacity: 0.85;
         color: #FFFFFF !important;
     }}
-
     .metric-box {{
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.2);
@@ -217,13 +201,11 @@ CUSTOM_CSS = f"""
         padding: 14px 18px;
         text-align: center;
     }}
-
     .metric-box .val {{
         font-size: 22px;
         font-weight: 700;
         color: var(--text-color);
     }}
-
     .metric-box .lab {{
         font-size: 12px;
         color: var(--text-color);
@@ -231,7 +213,6 @@ CUSTOM_CSS = f"""
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
-
     .log-banner {{
         background: linear-gradient(90deg, {PRIMARY} 0%, #55519e 55%, #cfcfe6 100%);
         padding: 14px 20px;
@@ -241,10 +222,9 @@ CUSTOM_CSS = f"""
         font-size: 18px;
         margin-bottom: 14px;
     }}
-
     footer {{visibility: hidden;}}
 
-    /* Extra shrink on very narrow phone screens */
+    /* Extra shrink on very narrow (phone) screens */
     @media (max-width: 400px) {{
         section[data-testid="stSidebar"] img {{
             max-width: 150px !important;
@@ -504,7 +484,7 @@ with col_form:
     )
 
     st.subheader("2. Side-View Image")
-    
+
     tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo (Landscape)"])
 
     uploaded_file = None
@@ -552,7 +532,7 @@ if estimate_clicked:
             if img_bgr is None:
                 st.error("Could not read the provided image. Please try again.")
             else:
-                # Ensure landscape orientation if image was taken vertically
+                # Rotate image if captured in portrait mode
                 h, w = img_bgr.shape[:2]
                 if h > w:
                     img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_CLOCKWISE)
