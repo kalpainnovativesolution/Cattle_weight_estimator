@@ -63,12 +63,47 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
+    /* ==========================================================================
+       Force light appearance regardless of system/browser dark mode.
+       Streamlit's built-in widgets (buttons, inputs, file uploader, etc.)
+       read color from CSS variables set on :root that flip between light
+       and dark theme values. Pinning those variables here means every
+       widget renders with light colors no matter what theme the visitor's
+       device prefers — this is what actually fixes the "black input box /
+       invisible white heading" look in dark mode, not just the page
+       background.
+       ========================================================================== */
+    :root, .stApp {{
+        --primary-color: {PRIMARY} !important;
+        --background-color: {BACKGROUND} !important;
+        --secondary-background-color: #F4F3FA !important;
+        --text-color: #1E1E2E !important;
+        color-scheme: light !important;
+    }}
+    html, body {{
+        color-scheme: light !important;
+    }}
     .stApp {{
         background-color: {BACKGROUND};
     }}
     h1, h2, h3 {{
-        color: {PRIMARY};
+        color: {PRIMARY} !important;
     }}
+    /* Catch-all for ordinary text so nothing renders as invisible white
+       text on our forced-white background. Uses :where() so it carries
+       ZERO CSS specificity — any other rule in this file (or Streamlit's
+       own component styles) will still win a conflict, this only fills
+       in the default for text that would otherwise inherit the (dark
+       mode) theme color. */
+    :where(.stApp, .stApp p, .stApp span, .stApp label, .stApp li,
+           .stApp small, .stApp strong, .stApp em, .stApp td, .stApp th,
+           .stApp div) {{
+        color: #1E1E2E;
+    }}
+</style>
+"""
+CUSTOM_CSS += f"""
+<style>
     section[data-testid="stSidebar"] {{
         background-color: #F4F3FA;
         border-right: 1px solid #DDDCEF;
@@ -324,7 +359,7 @@ def render_measurement_table_html(measurements: dict) -> str:
     rows_html = "".join(
         f"<tr>"
         f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:{PRIMARY};font-weight:600;'>{k}</td>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;'>{v}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:#1E1E2E;'>{v}</td>"
         f"</tr>"
         for k, v in measurements.items()
     )
