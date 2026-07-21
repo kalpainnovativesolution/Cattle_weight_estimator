@@ -2,7 +2,7 @@
 Cattle Weight Estimation — Streamlit Web App
 ------------------------------------------------------------------------------
 Workflow:
-  1. User enters a Tag ID and uploads a SIDE-VIEW photo of the animal
+  1. User enters a Tag ID and uploads or captures a SIDE-VIEW photo of the animal
      (calibration sticker must be visible).
   2. Segmentation model (best.pt) locates the cow + sticker for calibration.
   3. Keypoint model (best_model_side.pth) locates side-view keypoints.
@@ -60,41 +60,50 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
-    /* Use Streamlit CSS variables so colors adapt automatically to dark & light modes */
+    /* Heading typography */
     h1, h2, h3 {{
         color: var(--text-color);
     }}
 
     /* --------------------------------------------------------------------
-       Sidebar background — pinned on every wrapper Streamlit might use for
-       the sidebar panel, with a hard fallback color (not just the CSS
-       variable) so it can never resolve to the browser's transparent
-       default. On mobile the sidebar renders as a sliding overlay drawer;
-       if only the outer <section> got a background (and not its inner
-       content wrapper), the drawer's empty space shows the page behind it
-       through, which is the "transparent sidebar" bug.
+       Sidebar background — Solid & Adaptive across Light & Dark modes
+       Applies to all internal drawer wrappers so no transparent gap shows.
        -------------------------------------------------------------------- */
     section[data-testid="stSidebar"],
     section[data-testid="stSidebar"] > div,
-    section[data-testid="stSidebar"] [data-testid="stSidebarContent"],
-    section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
-        background-color: var(--secondary-background-color, #F4F3FA) !important;
+    [data-testid="stSidebarContent"],
+    [data-testid="stSidebarUserContent"],
+    [data-testid="stSidebarHeader"],
+    [data-testid="stSidebarNav"] {{
+        background-color: var(--secondary-background-color) !important;
         opacity: 1 !important;
     }}
+
     section[data-testid="stSidebar"] {{
         border-right: 1px solid rgba(128, 128, 128, 0.2);
     }}
-    /* Make sure the drawer covers the full scrollable height on mobile,
-       not just the initial viewport, so nothing peeks out below the fold. */
+
+    /* Mobile drawer sizing — ensures full overlay coverage with shadow */
     @media (max-width: 767px) {{
         section[data-testid="stSidebar"] {{
-            min-height: 100vh !important;
-            min-height: 100dvh !important;
+            width: 85vw !important;
+            max-width: 85vw !important;
+            min-width: 280px !important;
+            height: 100% !important;
+            box-shadow: 4px 0 12px rgba(0, 0, 0, 0.25) !important;
         }}
     }}
 
-    /* Sidebar logo — fixed, modest size on every device, left-aligned so
-       it lines up with the rest of the sidebar content (button, caption). */
+    /* Fixed width for Desktop screens only (>= 768px) */
+    @media (min-width: 768px) {{
+        section[data-testid="stSidebar"] {{
+            min-width: 260px !important;
+            max-width: 260px !important;
+            width: 260px !important;
+        }}
+    }}
+
+    /* Sidebar logo */
     section[data-testid="stSidebar"] img {{
         max-width: 150px !important;
         width: 100% !important;
@@ -102,19 +111,18 @@ CUSTOM_CSS = f"""
         margin: 0 !important;
         display: block;
     }}
-    /* The element wrapping st.image also gets centered by Streamlit by
-       default — force it back to flush-left so it matches the button. */
+
     section[data-testid="stSidebar"] [data-testid="stImage"] {{
         display: flex !important;
         justify-content: flex-start !important;
     }}
-    /* Sidebar buttons — capped to same width as the logo, regardless of
-       sidebar width, and left-aligned (not centered) so it lines up with
-       the logo above it instead of floating in the middle. */
+
+    /* Sidebar buttons */
     section[data-testid="stSidebar"] div.stButton {{
         display: flex !important;
         justify-content: flex-start !important;
     }}
+
     section[data-testid="stSidebar"] div.stButton > button {{
         max-width: 150px !important;
         width: 100% !important;
@@ -124,23 +132,17 @@ CUSTOM_CSS = f"""
         border-radius: 6px;
     }}
 
-    /* Lock sidebar width ONLY on Desktop screens (>= 768px) so mobile drawer isn't cut off */
-    @media (min-width: 768px) {{
-        section[data-testid="stSidebar"] {{
-            min-width: 260px !important;
-            max-width: 260px !important;
-            width: 260px !important;
-        }}
-    }}
-
     [data-testid="stSidebarResizeHandle"] {{
         display: none !important;
         pointer-events: none !important;
         width: 0 !important;
     }}
+
     section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] p {{
         font-size: 12px;
     }}
+
+    /* Primary buttons */
     div.stButton > button {{
         background-color: {PRIMARY};
         color: white;
@@ -149,10 +151,13 @@ CUSTOM_CSS = f"""
         padding: 0.6em 1.4em;
         font-weight: 600;
     }}
+
     div.stButton > button:hover {{
         background-color: #201d52;
         color: white;
     }}
+
+    /* Download buttons */
     div.stDownloadButton > button {{
         background-color: transparent;
         color: var(--text-color);
@@ -160,10 +165,13 @@ CUSTOM_CSS = f"""
         border-radius: 8px;
         font-weight: 600;
     }}
+
     div.stDownloadButton > button:hover {{
         background-color: {PRIMARY};
         color: white;
     }}
+
+    /* Result cards */
     .weight-card {{
         background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
         color: #FFFFFF !important;
@@ -173,12 +181,14 @@ CUSTOM_CSS = f"""
         margin-top: 10px;
         margin-bottom: 10px;
     }}
+
     .weight-card .value {{
         font-size: 52px;
         font-weight: 800;
         line-height: 1.1;
         color: #FFFFFF !important;
     }}
+
     .weight-card .label {{
         font-size: 15px;
         letter-spacing: 1px;
@@ -186,6 +196,7 @@ CUSTOM_CSS = f"""
         opacity: 0.85;
         color: #FFFFFF !important;
     }}
+
     .metric-box {{
         background-color: var(--secondary-background-color);
         border: 1px solid rgba(128, 128, 128, 0.2);
@@ -193,11 +204,13 @@ CUSTOM_CSS = f"""
         padding: 14px 18px;
         text-align: center;
     }}
+
     .metric-box .val {{
         font-size: 22px;
         font-weight: 700;
         color: var(--text-color);
     }}
+
     .metric-box .lab {{
         font-size: 12px;
         color: var(--text-color);
@@ -205,6 +218,7 @@ CUSTOM_CSS = f"""
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
+
     .log-banner {{
         background: linear-gradient(90deg, {PRIMARY} 0%, #55519e 55%, #cfcfe6 100%);
         padding: 14px 20px;
@@ -214,9 +228,10 @@ CUSTOM_CSS = f"""
         font-size: 18px;
         margin-bottom: 14px;
     }}
+
     footer {{visibility: hidden;}}
 
-    /* Extra shrink on very narrow (phone) screens */
+    /* Extra shrink on very narrow phone screens */
     @media (max-width: 400px) {{
         section[data-testid="stSidebar"] img {{
             max-width: 150px !important;
@@ -322,7 +337,7 @@ def get_models():
 # Helpers
 # ==============================================================================
 def reset_form():
-    """Fully clears Tag ID + uploaded image + current result, then scrolls to top."""
+    """Fully clears Tag ID + uploaded/captured image + current result, then scrolls to top."""
     st.session_state.form_version += 1
     st.session_state.estimation_done = False
     st.session_state.last_annotated_img = None
@@ -463,7 +478,7 @@ with st.sidebar:
 # ==============================================================================
 st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
 st.markdown("<h1>🐄 Cattle Weight Estimator</h1>", unsafe_allow_html=True)
-st.caption("Upload a side-view image to estimate live body weight from Body Length and Heart Girth.")
+st.caption("Upload or capture a side-view image to estimate live body weight from Body Length and Heart Girth.")
 
 col_form, col_result = st.columns([1, 1.2], gap="large")
 
@@ -476,11 +491,28 @@ with col_form:
     )
 
     st.subheader("2. Side-View Image")
-    uploaded_file = st.file_uploader(
-        "Upload a clear side-view photo (calibration sticker visible)",
-        type=["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp"],
-        key=f"uploader_{st.session_state.form_version}",
-    )
+    
+    # Tabs to select between file upload or live camera capture
+    tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo"])
+
+    uploaded_file = None
+    camera_file = None
+
+    with tab_upload:
+        uploaded_file = st.file_uploader(
+            "Upload a clear side-view photo (calibration sticker visible)",
+            type=["jpg", "jpeg", "png", "bmp", "tif", "tiff", "webp"],
+            key=f"uploader_{st.session_state.form_version}",
+        )
+
+    with tab_camera:
+        camera_file = st.camera_input(
+            "Capture a side-view photo",
+            key=f"camera_{st.session_state.form_version}",
+        )
+
+    # Use whichever input provided an image
+    selected_image_file = uploaded_file or camera_file
 
     with st.expander("⚙ Advanced settings"):
         sticker_cm = st.number_input(
@@ -497,17 +529,17 @@ with col_form:
 if estimate_clicked:
     if not tag_id.strip():
         st.warning("Please enter a Tag ID before estimating.")
-    elif uploaded_file is None:
-        st.warning("Please upload a side-view image before estimating.")
+    elif selected_image_file is None:
+        st.warning("Please upload or capture a side-view image before estimating.")
     else:
         with st.spinner("Loading models and analyzing image..."):
             yolo_model, resnet_model, device = get_models()
 
-            file_bytes = np.frombuffer(uploaded_file.getvalue(), np.uint8)
+            file_bytes = np.frombuffer(selected_image_file.getvalue(), np.uint8)
             img_bgr = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
 
             if img_bgr is None:
-                st.error("Could not read the uploaded image. Please try a different file.")
+                st.error("Could not read the provided image. Please try again.")
             else:
                 inference = run_side_inference(
                     yolo_model, resnet_model, img_bgr, device,
@@ -600,7 +632,7 @@ with col_result:
             if st.button("🔄 New Estimation", use_container_width=True):
                 reset_form()
     else:
-        st.info("Enter a Tag ID, upload a side-view image, then click **Estimate Weight**.")
+        st.info("Enter a Tag ID, upload/capture a side-view image, then click **Estimate Weight**.")
 
 st.markdown("---")
 st.caption("Weight formula: (Heart Girth² × Body Length) / 10840  |  Calibration via sticker of known size in the image.")
