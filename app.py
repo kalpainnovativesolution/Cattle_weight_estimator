@@ -64,37 +64,34 @@ st.set_page_config(
 CUSTOM_CSS = f"""
 <style>
     /* ==========================================================================
-       Theme tokens are fixed to light values ONLY — the app is locked to
-       light mode regardless of the visitor's system/browser dark-mode
-       setting. (Streamlit's own native widgets — inputs, file uploader,
-       alerts, captions — are locked separately via .streamlit/config.toml,
-       which is the authoritative source for Streamlit's theme and is what
-       keeps mobile and desktop rendering identically; this stylesheet only
-       covers the custom elements we draw ourselves.)
+       Theme tokens follow Streamlit's OWN live theme variables (which
+       Streamlit itself updates the moment someone uses the in-app
+       Settings -> "Choose app theme" toggle), with our brand colors only
+       as the fallback if a variable isn't available for some reason.
+       This means: on first load the app opens in light mode (locked via
+       .streamlit/config.toml, base="light"), but if the visitor manually
+       switches to Dark from the app menu, everything we draw ourselves —
+       headings, buttons, cards, metric boxes, the log table — follows
+       along automatically instead of staying stuck in light colors.
        ========================================================================== */
     :root {{
-        --app-bg: {BACKGROUND};
-        --sidebar-bg: #F4F3FA;
-        --sidebar-border: #DDDCEF;
-        --heading-color: {PRIMARY};
-        --btn-bg: {PRIMARY};
-        --btn-bg-hover: #201d52;
+        --app-bg: var(--background-color, {BACKGROUND});
+        --sidebar-bg: var(--secondary-background-color, #F4F3FA);
+        --sidebar-border: rgba(128, 128, 128, 0.35);
+        --heading-color: var(--primary-color, {PRIMARY});
+        --btn-bg: var(--primary-color, {PRIMARY});
         --btn-text: #FFFFFF;
-        --dl-btn-bg: #FFFFFF;
-        --dl-btn-border: {PRIMARY};
-        --dl-btn-text: {PRIMARY};
-        --dl-btn-bg-hover: {PRIMARY};
+        --dl-btn-bg: transparent;
+        --dl-btn-border: var(--primary-color, {PRIMARY});
+        --dl-btn-text: var(--primary-color, {PRIMARY});
+        --dl-btn-bg-hover: var(--primary-color, {PRIMARY});
         --dl-btn-text-hover: #FFFFFF;
-        --metric-bg: #F4F3FA;
-        --metric-border: #DDDCEF;
-        --metric-value: {PRIMARY};
-        --metric-label: #555555;
-        --table-row-border: #eeeeee;
-        --table-value-text: #1E1E2E;
-        color-scheme: light;
-    }}
-    html, body {{
-        color-scheme: light !important;
+        --metric-bg: var(--secondary-background-color, #F4F3FA);
+        --metric-border: rgba(128, 128, 128, 0.3);
+        --metric-value: var(--primary-color, {PRIMARY});
+        --metric-label: var(--text-color, #555555);
+        --table-row-border: rgba(128, 128, 128, 0.25);
+        --table-value-text: var(--text-color, #1E1E2E);
     }}
 
     .stApp {{
@@ -168,7 +165,7 @@ CUSTOM_CSS += f"""
         font-weight: 600;
     }}
     div.stButton > button:hover {{
-        background-color: var(--btn-bg-hover);
+        filter: brightness(0.85);
         color: var(--btn-text);
     }}
     div.stButton > button p {{
@@ -192,7 +189,7 @@ CUSTOM_CSS += f"""
         color: var(--dl-btn-text-hover) !important;
     }}
     .weight-card {{
-        background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
+        background: linear-gradient(135deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 70%, black) 100%);
         color: white;
         border-radius: 16px;
         padding: 28px 32px;
@@ -228,9 +225,10 @@ CUSTOM_CSS += f"""
         color: var(--metric-label);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        opacity: 0.75;
     }}
     .log-banner {{
-        background: linear-gradient(90deg, {PRIMARY} 0%, #55519e 55%, #cfcfe6 100%);
+        background: linear-gradient(90deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 55%, black) 55%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 20%, white) 100%);
         padding: 14px 20px;
         border-radius: 8px;
         color: white;
