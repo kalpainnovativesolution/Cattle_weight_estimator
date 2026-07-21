@@ -64,14 +64,13 @@ st.set_page_config(
 CUSTOM_CSS = f"""
 <style>
     /* ==========================================================================
-       Theme tokens — light values by default, swapped for dark values when
-       the visitor's system/browser is in dark mode. Only OUR custom
-       elements (headings we render as raw HTML, sidebar, buttons, cards,
-       the measurement table) read these tokens. Streamlit's own native
-       widgets (text input, file uploader, alerts, captions) already adapt
-       correctly to dark mode on their own — we don't touch their
-       variables anymore, since doing so is what broke things last time
-       (it also silently turned button text black).
+       Theme tokens are fixed to light values ONLY — the app is locked to
+       light mode regardless of the visitor's system/browser dark-mode
+       setting. (Streamlit's own native widgets — inputs, file uploader,
+       alerts, captions — are locked separately via .streamlit/config.toml,
+       which is the authoritative source for Streamlit's theme and is what
+       keeps mobile and desktop rendering identically; this stylesheet only
+       covers the custom elements we draw ourselves.)
        ========================================================================== */
     :root {{
         --app-bg: {BACKGROUND};
@@ -92,28 +91,10 @@ CUSTOM_CSS = f"""
         --metric-label: #555555;
         --table-row-border: #eeeeee;
         --table-value-text: #1E1E2E;
+        color-scheme: light;
     }}
-    @media (prefers-color-scheme: dark) {{
-        :root {{
-            --app-bg: #12121A;
-            --sidebar-bg: #1B1A26;
-            --sidebar-border: #34334A;
-            --heading-color: #B9AFFF;
-            --btn-bg: #5851B3;
-            --btn-bg-hover: #6F68CC;
-            --btn-text: #FFFFFF;
-            --dl-btn-bg: transparent;
-            --dl-btn-border: #7F79D9;
-            --dl-btn-text: #C9C6FF;
-            --dl-btn-bg-hover: #5851B3;
-            --dl-btn-text-hover: #FFFFFF;
-            --metric-bg: #201F2E;
-            --metric-border: #3A394F;
-            --metric-value: #C9C6FF;
-            --metric-label: #B0AEC4;
-            --table-row-border: #34334A;
-            --table-value-text: #ECEBF5;
-        }}
+    html, body {{
+        color-scheme: light !important;
     }}
 
     .stApp {{
