@@ -63,15 +63,50 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
+    /* ==========================================================================
+       Theme tokens follow Streamlit's OWN live theme variables (which
+       Streamlit itself updates the moment someone uses the in-app
+       Settings -> "Choose app theme" toggle), with our brand colors only
+       as the fallback if a variable isn't available for some reason.
+       This means: on first load the app opens in light mode (locked via
+       .streamlit/config.toml, base="light"), but if the visitor manually
+       switches to Dark from the app menu, everything we draw ourselves —
+       headings, buttons, cards, metric boxes, the log table — follows
+       along automatically instead of staying stuck in light colors.
+       ========================================================================== */
+    :root {{
+        --app-bg: var(--background-color, {BACKGROUND});
+        --sidebar-bg: var(--secondary-background-color, #F4F3FA);
+        --sidebar-border: rgba(128, 128, 128, 0.35);
+        --heading-color: var(--primary-color, {PRIMARY});
+        --btn-bg: var(--primary-color, {PRIMARY});
+        --btn-text: #FFFFFF;
+        --dl-btn-bg: transparent;
+        --dl-btn-border: var(--primary-color, {PRIMARY});
+        --dl-btn-text: var(--primary-color, {PRIMARY});
+        --dl-btn-bg-hover: var(--primary-color, {PRIMARY});
+        --dl-btn-text-hover: #FFFFFF;
+        --metric-bg: var(--secondary-background-color, #F4F3FA);
+        --metric-border: rgba(128, 128, 128, 0.3);
+        --metric-value: var(--primary-color, {PRIMARY});
+        --metric-label: var(--text-color, #555555);
+        --table-row-border: rgba(128, 128, 128, 0.25);
+        --table-value-text: var(--text-color, #1E1E2E);
+    }}
+
     .stApp {{
-        background-color: {BACKGROUND};
+        background-color: var(--app-bg);
     }}
     h1, h2, h3 {{
-        color: {PRIMARY};
+        color: var(--heading-color) !important;
     }}
+</style>
+"""
+CUSTOM_CSS += f"""
+<style>
     section[data-testid="stSidebar"] {{
-        background-color: #F4F3FA;
-        border-right: 1px solid #DDDCEF;
+        background-color: var(--sidebar-bg);
+        border-right: 1px solid var(--sidebar-border);
     }}
     /* Sidebar logo — fixed, modest size on every device, left-aligned so
        it lines up with the rest of the sidebar content (button, caption). */
@@ -122,30 +157,39 @@ CUSTOM_CSS = f"""
         font-size: 12px;
     }}
     div.stButton > button {{
-        background-color: {PRIMARY};
-        color: white;
+        background-color: var(--btn-bg);
+        color: var(--btn-text);
         border-radius: 8px;
         border: none;
         padding: 0.6em 1.4em;
         font-weight: 600;
     }}
     div.stButton > button:hover {{
-        background-color: #201d52;
-        color: white;
+        filter: brightness(0.85);
+        color: var(--btn-text);
+    }}
+    div.stButton > button p {{
+        color: var(--btn-text) !important;
     }}
     div.stDownloadButton > button {{
-        background-color: white;
-        color: {PRIMARY};
-        border: 1.5px solid {PRIMARY};
+        background-color: var(--dl-btn-bg);
+        color: var(--dl-btn-text);
+        border: 1.5px solid var(--dl-btn-border);
         border-radius: 8px;
         font-weight: 600;
     }}
+    div.stDownloadButton > button p {{
+        color: var(--dl-btn-text) !important;
+    }}
     div.stDownloadButton > button:hover {{
-        background-color: {PRIMARY};
-        color: white;
+        background-color: var(--dl-btn-bg-hover);
+        color: var(--dl-btn-text-hover);
+    }}
+    div.stDownloadButton > button:hover p {{
+        color: var(--dl-btn-text-hover) !important;
     }}
     .weight-card {{
-        background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
+        background: linear-gradient(135deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 70%, black) 100%);
         color: white;
         border-radius: 16px;
         padding: 28px 32px;
@@ -165,8 +209,8 @@ CUSTOM_CSS = f"""
         opacity: 0.85;
     }}
     .metric-box {{
-        background-color: #F4F3FA;
-        border: 1px solid #DDDCEF;
+        background-color: var(--metric-bg);
+        border: 1px solid var(--metric-border);
         border-radius: 10px;
         padding: 14px 18px;
         text-align: center;
@@ -174,16 +218,17 @@ CUSTOM_CSS = f"""
     .metric-box .val {{
         font-size: 22px;
         font-weight: 700;
-        color: {PRIMARY};
+        color: var(--metric-value);
     }}
     .metric-box .lab {{
         font-size: 12px;
-        color: #555;
+        color: var(--metric-label);
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        opacity: 0.75;
     }}
     .log-banner {{
-        background: linear-gradient(90deg, {PRIMARY} 0%, #55519e 55%, #cfcfe6 100%);
+        background: linear-gradient(90deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 55%, black) 55%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 20%, white) 100%);
         padding: 14px 20px;
         border-radius: 8px;
         color: white;
@@ -323,8 +368,8 @@ def reset_form():
 def render_measurement_table_html(measurements: dict) -> str:
     rows_html = "".join(
         f"<tr>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:{PRIMARY};font-weight:600;'>{k}</td>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;'>{v}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid var(--table-row-border);color:var(--metric-value);font-weight:600;'>{k}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid var(--table-row-border);color:var(--table-value-text);'>{v}</td>"
         f"</tr>"
         for k, v in measurements.items()
     )
