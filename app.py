@@ -2,7 +2,7 @@
 Cattle Weight Estimation — Streamlit Web App
 ------------------------------------------------------------------------------
 Workflow:
-  1. User enters a Tag ID and uploads or captures a SIDE-VIEW photo of the animal
+  1. User enters a Tag ID and uploads a SIDE-VIEW photo of the animal
      (calibration sticker must be visible).
   2. Segmentation model (best.pt) locates the cow + sticker for calibration.
   3. Keypoint model (best_model_side.pth) locates side-view keypoints.
@@ -491,7 +491,7 @@ with col_form:
 
     with tab_camera:
         camera_file = st.camera_input(
-            "Capture side-view photo",
+            "Capture side-view photo (Hold device horizontally for landscape)",
             key=f"camera_{st.session_state.form_version}",
         )
 
@@ -524,6 +524,11 @@ if estimate_clicked:
             if img_bgr is None:
                 st.error("Could not read the provided image. Please try again.")
             else:
+                # Automatically convert portrait images (height > width) to landscape format
+                h, w = img_bgr.shape[:2]
+                if h > w:
+                    img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_CLOCKWISE)
+
                 inference = run_side_inference(
                     yolo_model, resnet_model, img_bgr, device,
                     sticker_cm=sticker_cm, score_thresh=conf_thresh,
