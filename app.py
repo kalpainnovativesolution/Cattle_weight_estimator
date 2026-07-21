@@ -64,10 +64,35 @@ CUSTOM_CSS = f"""
     h1, h2, h3 {{
         color: var(--text-color);
     }}
+
+    /* --------------------------------------------------------------------
+       Sidebar background — pinned on every wrapper Streamlit might use for
+       the sidebar panel, with a hard fallback color (not just the CSS
+       variable) so it can never resolve to the browser's transparent
+       default. On mobile the sidebar renders as a sliding overlay drawer;
+       if only the outer <section> got a background (and not its inner
+       content wrapper), the drawer's empty space shows the page behind it
+       through, which is the "transparent sidebar" bug.
+       -------------------------------------------------------------------- */
+    section[data-testid="stSidebar"],
+    section[data-testid="stSidebar"] > div,
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"],
+    section[data-testid="stSidebar"] [data-testid="stSidebarUserContent"] {{
+        background-color: var(--secondary-background-color, #F4F3FA) !important;
+        opacity: 1 !important;
+    }}
     section[data-testid="stSidebar"] {{
-        background-color: var(--secondary-background-color);
         border-right: 1px solid rgba(128, 128, 128, 0.2);
     }}
+    /* Make sure the drawer covers the full scrollable height on mobile,
+       not just the initial viewport, so nothing peeks out below the fold. */
+    @media (max-width: 767px) {{
+        section[data-testid="stSidebar"] {{
+            min-height: 100vh !important;
+            min-height: 100dvh !important;
+        }}
+    }}
+
     /* Sidebar logo — fixed, modest size on every device, left-aligned so
        it lines up with the rest of the sidebar content (button, caption). */
     section[data-testid="stSidebar"] img {{
@@ -98,13 +123,16 @@ CUSTOM_CSS = f"""
         padding: 0.4em 0.7em;
         border-radius: 6px;
     }}
-    /* Lock the sidebar width — hide/disable the drag handle so nobody
-       can resize it, and pin the sidebar itself to a fixed width. */
-    section[data-testid="stSidebar"] {{
-        min-width: 260px !important;
-        max-width: 260px !important;
-        width: 260px !important;
+
+    /* Lock sidebar width ONLY on Desktop screens (>= 768px) so mobile drawer isn't cut off */
+    @media (min-width: 768px) {{
+        section[data-testid="stSidebar"] {{
+            min-width: 260px !important;
+            max-width: 260px !important;
+            width: 260px !important;
+        }}
     }}
+
     [data-testid="stSidebarResizeHandle"] {{
         display: none !important;
         pointer-events: none !important;
