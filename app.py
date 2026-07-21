@@ -527,7 +527,7 @@ if estimate_clicked:
                 # Automatically convert portrait images (height > width) to landscape format
                 h, w = img_bgr.shape[:2]
                 if h > w:
-                    img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_CLOCKWISE)
+                    img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
                 inference = run_side_inference(
                     yolo_model, resnet_model, img_bgr, device,
