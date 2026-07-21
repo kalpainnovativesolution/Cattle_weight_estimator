@@ -64,49 +64,71 @@ st.set_page_config(
 CUSTOM_CSS = f"""
 <style>
     /* ==========================================================================
-       Force light appearance regardless of system/browser dark mode.
-       Streamlit's built-in widgets (buttons, inputs, file uploader, etc.)
-       read color from CSS variables set on :root that flip between light
-       and dark theme values. Pinning those variables here means every
-       widget renders with light colors no matter what theme the visitor's
-       device prefers — this is what actually fixes the "black input box /
-       invisible white heading" look in dark mode, not just the page
-       background.
+       Theme tokens — light values by default, swapped for dark values when
+       the visitor's system/browser is in dark mode. Only OUR custom
+       elements (headings we render as raw HTML, sidebar, buttons, cards,
+       the measurement table) read these tokens. Streamlit's own native
+       widgets (text input, file uploader, alerts, captions) already adapt
+       correctly to dark mode on their own — we don't touch their
+       variables anymore, since doing so is what broke things last time
+       (it also silently turned button text black).
        ========================================================================== */
-    :root, .stApp {{
-        --primary-color: {PRIMARY} !important;
-        --background-color: {BACKGROUND} !important;
-        --secondary-background-color: #F4F3FA !important;
-        --text-color: #1E1E2E !important;
-        color-scheme: light !important;
+    :root {{
+        --app-bg: {BACKGROUND};
+        --sidebar-bg: #F4F3FA;
+        --sidebar-border: #DDDCEF;
+        --heading-color: {PRIMARY};
+        --btn-bg: {PRIMARY};
+        --btn-bg-hover: #201d52;
+        --btn-text: #FFFFFF;
+        --dl-btn-bg: #FFFFFF;
+        --dl-btn-border: {PRIMARY};
+        --dl-btn-text: {PRIMARY};
+        --dl-btn-bg-hover: {PRIMARY};
+        --dl-btn-text-hover: #FFFFFF;
+        --metric-bg: #F4F3FA;
+        --metric-border: #DDDCEF;
+        --metric-value: {PRIMARY};
+        --metric-label: #555555;
+        --table-row-border: #eeeeee;
+        --table-value-text: #1E1E2E;
     }}
-    html, body {{
-        color-scheme: light !important;
+    @media (prefers-color-scheme: dark) {{
+        :root {{
+            --app-bg: #12121A;
+            --sidebar-bg: #1B1A26;
+            --sidebar-border: #34334A;
+            --heading-color: #B9AFFF;
+            --btn-bg: #5851B3;
+            --btn-bg-hover: #6F68CC;
+            --btn-text: #FFFFFF;
+            --dl-btn-bg: transparent;
+            --dl-btn-border: #7F79D9;
+            --dl-btn-text: #C9C6FF;
+            --dl-btn-bg-hover: #5851B3;
+            --dl-btn-text-hover: #FFFFFF;
+            --metric-bg: #201F2E;
+            --metric-border: #3A394F;
+            --metric-value: #C9C6FF;
+            --metric-label: #B0AEC4;
+            --table-row-border: #34334A;
+            --table-value-text: #ECEBF5;
+        }}
     }}
+
     .stApp {{
-        background-color: {BACKGROUND};
+        background-color: var(--app-bg);
     }}
     h1, h2, h3 {{
-        color: {PRIMARY} !important;
-    }}
-    /* Catch-all for ordinary text so nothing renders as invisible white
-       text on our forced-white background. Uses :where() so it carries
-       ZERO CSS specificity — any other rule in this file (or Streamlit's
-       own component styles) will still win a conflict, this only fills
-       in the default for text that would otherwise inherit the (dark
-       mode) theme color. */
-    :where(.stApp, .stApp p, .stApp span, .stApp label, .stApp li,
-           .stApp small, .stApp strong, .stApp em, .stApp td, .stApp th,
-           .stApp div) {{
-        color: #1E1E2E;
+        color: var(--heading-color) !important;
     }}
 </style>
 """
 CUSTOM_CSS += f"""
 <style>
     section[data-testid="stSidebar"] {{
-        background-color: #F4F3FA;
-        border-right: 1px solid #DDDCEF;
+        background-color: var(--sidebar-bg);
+        border-right: 1px solid var(--sidebar-border);
     }}
     /* Sidebar logo — fixed, modest size on every device, left-aligned so
        it lines up with the rest of the sidebar content (button, caption). */
@@ -157,27 +179,36 @@ CUSTOM_CSS += f"""
         font-size: 12px;
     }}
     div.stButton > button {{
-        background-color: {PRIMARY};
-        color: white;
+        background-color: var(--btn-bg);
+        color: var(--btn-text);
         border-radius: 8px;
         border: none;
         padding: 0.6em 1.4em;
         font-weight: 600;
     }}
     div.stButton > button:hover {{
-        background-color: #201d52;
-        color: white;
+        background-color: var(--btn-bg-hover);
+        color: var(--btn-text);
+    }}
+    div.stButton > button p {{
+        color: var(--btn-text) !important;
     }}
     div.stDownloadButton > button {{
-        background-color: white;
-        color: {PRIMARY};
-        border: 1.5px solid {PRIMARY};
+        background-color: var(--dl-btn-bg);
+        color: var(--dl-btn-text);
+        border: 1.5px solid var(--dl-btn-border);
         border-radius: 8px;
         font-weight: 600;
     }}
+    div.stDownloadButton > button p {{
+        color: var(--dl-btn-text) !important;
+    }}
     div.stDownloadButton > button:hover {{
-        background-color: {PRIMARY};
-        color: white;
+        background-color: var(--dl-btn-bg-hover);
+        color: var(--dl-btn-text-hover);
+    }}
+    div.stDownloadButton > button:hover p {{
+        color: var(--dl-btn-text-hover) !important;
     }}
     .weight-card {{
         background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
@@ -200,8 +231,8 @@ CUSTOM_CSS += f"""
         opacity: 0.85;
     }}
     .metric-box {{
-        background-color: #F4F3FA;
-        border: 1px solid #DDDCEF;
+        background-color: var(--metric-bg);
+        border: 1px solid var(--metric-border);
         border-radius: 10px;
         padding: 14px 18px;
         text-align: center;
@@ -209,11 +240,11 @@ CUSTOM_CSS += f"""
     .metric-box .val {{
         font-size: 22px;
         font-weight: 700;
-        color: {PRIMARY};
+        color: var(--metric-value);
     }}
     .metric-box .lab {{
         font-size: 12px;
-        color: #555;
+        color: var(--metric-label);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
@@ -358,8 +389,8 @@ def reset_form():
 def render_measurement_table_html(measurements: dict) -> str:
     rows_html = "".join(
         f"<tr>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:{PRIMARY};font-weight:600;'>{k}</td>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:#1E1E2E;'>{v}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid var(--table-row-border);color:var(--metric-value);font-weight:600;'>{k}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid var(--table-row-border);color:var(--table-value-text);'>{v}</td>"
         f"</tr>"
         for k, v in measurements.items()
     )
