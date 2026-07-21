@@ -470,7 +470,7 @@ with st.sidebar:
 # Main content
 # ==============================================================================
 st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
-st.markdown("<h1>🐄 Cattle Weight Estimator</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🐄 Cattle Weight Estimatory</h1>", unsafe_allow_html=True)
 st.caption("Upload or capture a side-view image to estimate live body weight from Body Length and Heart Girth.")
 
 col_form, col_result = st.columns([1, 1.2], gap="large")
