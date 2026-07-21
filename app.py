@@ -66,6 +66,19 @@ CUSTOM_CSS = f"""
     }}
 
     /* --------------------------------------------------------------------
+       Camera Input Landscape Aspect Ratio Enforcement
+       Forces the video viewport container to stay in 16:9 Landscape mode
+       -------------------------------------------------------------------- */
+    [data-testid="stCameraInput"] video,
+    [data-testid="stCameraInput"] canvas {{
+        aspect-ratio: 16 / 9 !important;
+        object-fit: cover !important;
+        width: 100% !important;
+        height: auto !important;
+        border-radius: 12px;
+    }}
+
+    /* --------------------------------------------------------------------
        Sidebar background — Solid & Adaptive across Light & Dark modes
        Applies to all internal drawer wrappers so no transparent gap shows.
        -------------------------------------------------------------------- */
@@ -492,8 +505,7 @@ with col_form:
 
     st.subheader("2. Side-View Image")
     
-    # Tabs to select between file upload or live camera capture
-    tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo"])
+    tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo (Landscape)"])
 
     uploaded_file = None
     camera_file = None
@@ -507,11 +519,10 @@ with col_form:
 
     with tab_camera:
         camera_file = st.camera_input(
-            "Capture a side-view photo",
+            "Capture side-view photo (Hold device in landscape)",
             key=f"camera_{st.session_state.form_version}",
         )
 
-    # Use whichever input provided an image
     selected_image_file = uploaded_file or camera_file
 
     with st.expander("⚙ Advanced settings"):
@@ -541,6 +552,11 @@ if estimate_clicked:
             if img_bgr is None:
                 st.error("Could not read the provided image. Please try again.")
             else:
+                # Ensure landscape orientation if image was taken vertically
+                h, w = img_bgr.shape[:2]
+                if h > w:
+                    img_bgr = cv2.rotate(img_bgr, cv2.ROTATE_90_CLOCKWISE)
+
                 inference = run_side_inference(
                     yolo_model, resnet_model, img_bgr, device,
                     sticker_cm=sticker_cm, score_thresh=conf_thresh,
