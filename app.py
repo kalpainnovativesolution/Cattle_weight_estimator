@@ -63,194 +63,381 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
-    /* ==========================================================================
-       Theme tokens follow Streamlit's OWN live theme variables (which
-       Streamlit itself updates the moment someone uses the in-app
-       Settings -> "Choose app theme" toggle), with our brand colors only
-       as the fallback if a variable isn't available for some reason.
-       This means: on first load the app opens in light mode (locked via
-       .streamlit/config.toml, base="light"), but if the visitor manually
-       switches to Dark from the app menu, everything we draw ourselves —
-       headings, buttons, cards, metric boxes, the log table — follows
-       along automatically instead of staying stuck in light colors.
-       ========================================================================== */
-    :root {{
-        --app-bg: var(--background-color, {BACKGROUND});
-        --sidebar-bg: var(--secondary-background-color, #F4F3FA);
-        --sidebar-border: rgba(128, 128, 128, 0.35);
-        --heading-color: var(--primary-color, {PRIMARY});
-        --btn-bg: var(--primary-color, {PRIMARY});
-        --btn-text: #FFFFFF;
-        --dl-btn-bg: transparent;
-        --dl-btn-border: var(--primary-color, {PRIMARY});
-        --dl-btn-text: var(--primary-color, {PRIMARY});
-        --dl-btn-bg-hover: var(--primary-color, {PRIMARY});
-        --dl-btn-text-hover: #FFFFFF;
-        --metric-bg: var(--secondary-background-color, #F4F3FA);
-        --metric-border: rgba(128, 128, 128, 0.3);
-        --metric-value: var(--primary-color, {PRIMARY});
-        --metric-label: var(--text-color, #555555);
-        --table-row-border: rgba(128, 128, 128, 0.25);
-        --table-value-text: var(--text-color, #1E1E2E);
-    }}
 
-    .stApp {{
-        background-color: var(--app-bg);
-    }}
-    h1, h2, h3 {{
-        color: var(--heading-color) !important;
-    }}
-</style>
+&#x20;   /\* ==========================================================================
+
+&#x20;      Theme tokens are fixed to light values ONLY — the app is locked to
+
+&#x20;      light mode regardless of the visitor's system/browser dark-mode
+
+&#x20;      setting. (Streamlit's own native widgets — inputs, file uploader,
+
+&#x20;      alerts, captions — are locked separately via .streamlit/config.toml,
+
+&#x20;      which is the authoritative source for Streamlit's theme and is what
+
+&#x20;      keeps mobile and desktop rendering identically; this stylesheet only
+
+&#x20;      covers the custom elements we draw ourselves.)
+
+&#x20;      ========================================================================== \*/
+
+&#x20;   :root {{
+
+&#x20;       --app-bg: {BACKGROUND};
+
+&#x20;       --sidebar-bg: #F4F3FA;
+
+&#x20;       --sidebar-border: #DDDCEF;
+
+&#x20;       --heading-color: {PRIMARY};
+
+&#x20;       --btn-bg: {PRIMARY};
+
+&#x20;       --btn-bg-hover: #201d52;
+
+&#x20;       --btn-text: #FFFFFF;
+
+&#x20;       --dl-btn-bg: #FFFFFF;
+
+&#x20;       --dl-btn-border: {PRIMARY};
+
+&#x20;       --dl-btn-text: {PRIMARY};
+
+&#x20;       --dl-btn-bg-hover: {PRIMARY};
+
+&#x20;       --dl-btn-text-hover: #FFFFFF;
+
+&#x20;       --metric-bg: #F4F3FA;
+
+&#x20;       --metric-border: #DDDCEF;
+
+&#x20;       --metric-value: {PRIMARY};
+
+&#x20;       --metric-label: #555555;
+
+&#x20;       --table-row-border: #eeeeee;
+
+&#x20;       --table-value-text: #1E1E2E;
+
+&#x20;       color-scheme: light;
+
+&#x20;   }}
+
+&#x20;   html, body {{
+
+&#x20;       color-scheme: light !important;
+
+&#x20;   }}
+
+
+
+&#x20;   .stApp {{
+
+&#x20;       background-color: var(--app-bg);
+
+&#x20;   }}
+
+&#x20;   h1, h2, h3 {{
+
+&#x20;       color: var(--heading-color) !important;
+
+&#x20;   }}
+
 """
 CUSTOM_CSS += f"""
 <style>
-    section[data-testid="stSidebar"] {{
-        background-color: var(--sidebar-bg);
-        border-right: 1px solid var(--sidebar-border);
-    }}
-    /* Sidebar logo — fixed, modest size on every device, left-aligned so
-       it lines up with the rest of the sidebar content (button, caption). */
-    section[data-testid="stSidebar"] img {{
-        max-width: 150px !important;
-        width: 100% !important;
-        height: auto !important;
-        margin: 0 !important;
-        display: block;
-    }}
-    /* The element wrapping st.image also gets centered by Streamlit by
-       default — force it back to flush-left so it matches the button. */
-    section[data-testid="stSidebar"] [data-testid="stImage"] {{
-        display: flex !important;
-        justify-content: flex-start !important;
-    }}
-    /* Sidebar buttons — capped to same width as the logo, regardless of
-       sidebar width, and left-aligned (not centered) so it lines up with
-       the logo above it instead of floating in the middle. The !important
-       on max-width overrides the inline width:100% that
-       use_container_width=True injects, so the button can never grow
-       past the logo's width even if the sidebar is dragged wider. */
-    section[data-testid="stSidebar"] div.stButton {{
-        display: flex !important;
-        justify-content: flex-start !important;
-    }}
-    section[data-testid="stSidebar"] div.stButton > button {{
-        max-width: 150px !important;
-        width: 100% !important;
-        margin: 0 !important;
-        font-size: 13px;
-        padding: 0.4em 0.7em;
-        border-radius: 6px;
-    }}
-    /* Lock the sidebar width — hide/disable the drag handle so nobody
-       can resize it, and pin the sidebar itself to a fixed width. */
-    section[data-testid="stSidebar"] {{
-        min-width: 260px !important;
-        max-width: 260px !important;
-        width: 260px !important;
-    }}
-    [data-testid="stSidebarResizeHandle"] {{
-        display: none !important;
-        pointer-events: none !important;
-        width: 0 !important;
-    }}
-    section[data-testid="stSidebar"] .stCaption, section[data-testid="stSidebar"] p {{
-        font-size: 12px;
-    }}
-    div.stButton > button {{
-        background-color: var(--btn-bg);
-        color: var(--btn-text);
-        border-radius: 8px;
-        border: none;
-        padding: 0.6em 1.4em;
-        font-weight: 600;
-    }}
-    div.stButton > button:hover {{
-        filter: brightness(0.85);
-        color: var(--btn-text);
-    }}
-    div.stButton > button p {{
-        color: var(--btn-text) !important;
-    }}
-    div.stDownloadButton > button {{
-        background-color: var(--dl-btn-bg);
-        color: var(--dl-btn-text);
-        border: 1.5px solid var(--dl-btn-border);
-        border-radius: 8px;
-        font-weight: 600;
-    }}
-    div.stDownloadButton > button p {{
-        color: var(--dl-btn-text) !important;
-    }}
-    div.stDownloadButton > button:hover {{
-        background-color: var(--dl-btn-bg-hover);
-        color: var(--dl-btn-text-hover);
-    }}
-    div.stDownloadButton > button:hover p {{
-        color: var(--dl-btn-text-hover) !important;
-    }}
-    .weight-card {{
-        background: linear-gradient(135deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 70%, black) 100%);
-        color: white;
-        border-radius: 16px;
-        padding: 28px 32px;
-        text-align: center;
-        margin-top: 10px;
-        margin-bottom: 10px;
-    }}
-    .weight-card .value {{
-        font-size: 52px;
-        font-weight: 800;
-        line-height: 1.1;
-    }}
-    .weight-card .label {{
-        font-size: 15px;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        opacity: 0.85;
-    }}
-    .metric-box {{
-        background-color: var(--metric-bg);
-        border: 1px solid var(--metric-border);
-        border-radius: 10px;
-        padding: 14px 18px;
-        text-align: center;
-    }}
-    .metric-box .val {{
-        font-size: 22px;
-        font-weight: 700;
-        color: var(--metric-value);
-    }}
-    .metric-box .lab {{
-        font-size: 12px;
-        color: var(--metric-label);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        opacity: 0.75;
-    }}
-    .log-banner {{
-        background: linear-gradient(90deg, var(--primary-color, {PRIMARY}) 0%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 55%, black) 55%, color-mix(in srgb, var(--primary-color, {PRIMARY}) 20%, white) 100%);
-        padding: 14px 20px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 700;
-        font-size: 18px;
-        margin-bottom: 14px;
-    }}
-    footer {{visibility: hidden;}}
 
-    /* Extra shrink on very narrow (phone) screens */
-    @media (max-width: 400px) {{
-        section[data-testid="stSidebar"] img {{
-            max-width: 150px !important;
-        }}
-        section[data-testid="stSidebar"] div.stButton > button {{
-            max-width: 150px !important;
-            margin: 0 !important;
-            font-size: 12px;
-            padding: 0.35em 0.6em;
-        }}
-    }}
-</style>
+&#x20;   section\[data-testid="stSidebar"] {{
+
+&#x20;       background-color: var(--sidebar-bg);
+
+&#x20;       border-right: 1px solid var(--sidebar-border);
+
+&#x20;   }}
+
+&#x20;   /\* Sidebar logo — fixed, modest size on every device, left-aligned so
+
+&#x20;      it lines up with the rest of the sidebar content (button, caption). \*/
+
+&#x20;   section\[data-testid="stSidebar"] img {{
+
+&#x20;       max-width: 150px !important;
+
+&#x20;       width: 100% !important;
+
+&#x20;       height: auto !important;
+
+&#x20;       margin: 0 !important;
+
+&#x20;       display: block;
+
+&#x20;   }}
+
+&#x20;   /\* The element wrapping st.image also gets centered by Streamlit by
+
+&#x20;      default — force it back to flush-left so it matches the button. \*/
+
+&#x20;   section\[data-testid="stSidebar"] \[data-testid="stImage"] {{
+
+&#x20;       display: flex !important;
+
+&#x20;       justify-content: flex-start !important;
+
+&#x20;   }}
+
+&#x20;   /\* Sidebar buttons — capped to same width as the logo, regardless of
+
+&#x20;      sidebar width, and left-aligned (not centered) so it lines up with
+
+&#x20;      the logo above it instead of floating in the middle. The !important
+
+&#x20;      on max-width overrides the inline width:100% that
+
+&#x20;      use\_container\_width=True injects, so the button can never grow
+
+&#x20;      past the logo's width even if the sidebar is dragged wider. \*/
+
+&#x20;   section\[data-testid="stSidebar"] div.stButton {{
+
+&#x20;       display: flex !important;
+
+&#x20;       justify-content: flex-start !important;
+
+&#x20;   }}
+
+&#x20;   section\[data-testid="stSidebar"] div.stButton > button {{
+
+&#x20;       max-width: 150px !important;
+
+&#x20;       width: 100% !important;
+
+&#x20;       margin: 0 !important;
+
+&#x20;       font-size: 13px;
+
+&#x20;       padding: 0.4em 0.7em;
+
+&#x20;       border-radius: 6px;
+
+&#x20;   }}
+
+&#x20;   /\* Lock the sidebar width — hide/disable the drag handle so nobody
+
+&#x20;      can resize it, and pin the sidebar itself to a fixed width. \*/
+
+&#x20;   section\[data-testid="stSidebar"] {{
+
+&#x20;       min-width: 260px !important;
+
+&#x20;       max-width: 260px !important;
+
+&#x20;       width: 260px !important;
+
+&#x20;   }}
+
+&#x20;   \[data-testid="stSidebarResizeHandle"] {{
+
+&#x20;       display: none !important;
+
+&#x20;       pointer-events: none !important;
+
+&#x20;       width: 0 !important;
+
+&#x20;   }}
+
+&#x20;   section\[data-testid="stSidebar"] .stCaption, section\[data-testid="stSidebar"] p {{
+
+&#x20;       font-size: 12px;
+
+&#x20;   }}
+
+&#x20;   div.stButton > button {{
+
+&#x20;       background-color: var(--btn-bg);
+
+&#x20;       color: var(--btn-text);
+
+&#x20;       border-radius: 8px;
+
+&#x20;       border: none;
+
+&#x20;       padding: 0.6em 1.4em;
+
+&#x20;       font-weight: 600;
+
+&#x20;   }}
+
+&#x20;   div.stButton > button:hover {{
+
+&#x20;       background-color: var(--btn-bg-hover);
+
+&#x20;       color: var(--btn-text);
+
+&#x20;   }}
+
+&#x20;   div.stButton > button p {{
+
+&#x20;       color: var(--btn-text) !important;
+
+&#x20;   }}
+
+&#x20;   div.stDownloadButton > button {{
+
+&#x20;       background-color: var(--dl-btn-bg);
+
+&#x20;       color: var(--dl-btn-text);
+
+&#x20;       border: 1.5px solid var(--dl-btn-border);
+
+&#x20;       border-radius: 8px;
+
+&#x20;       font-weight: 600;
+
+&#x20;   }}
+
+&#x20;   div.stDownloadButton > button p {{
+
+&#x20;       color: var(--dl-btn-text) !important;
+
+&#x20;   }}
+
+&#x20;   div.stDownloadButton > button:hover {{
+
+&#x20;       background-color: var(--dl-btn-bg-hover);
+
+&#x20;       color: var(--dl-btn-text-hover);
+
+&#x20;   }}
+
+&#x20;   div.stDownloadButton > button:hover p {{
+
+&#x20;       color: var(--dl-btn-text-hover) !important;
+
+&#x20;   }}
+
+&#x20;   .weight-card {{
+
+&#x20;       background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
+
+&#x20;       color: white;
+
+&#x20;       border-radius: 16px;
+
+&#x20;       padding: 28px 32px;
+
+&#x20;       text-align: center;
+
+&#x20;       margin-top: 10px;
+
+&#x20;       margin-bottom: 10px;
+
+&#x20;   }}
+
+&#x20;   .weight-card .value {{
+
+&#x20;       font-size: 52px;
+
+&#x20;       font-weight: 800;
+
+&#x20;       line-height: 1.1;
+
+&#x20;   }}
+
+&#x20;   .weight-card .label {{
+
+&#x20;       font-size: 15px;
+
+&#x20;       letter-spacing: 1px;
+
+&#x20;       text-transform: uppercase;
+
+&#x20;       opacity: 0.85;
+
+&#x20;   }}
+
+&#x20;   .metric-box {{
+
+&#x20;       background-color: var(--metric-bg);
+
+&#x20;       border: 1px solid var(--metric-border);
+
+&#x20;       border-radius: 10px;
+
+&#x20;       padding: 14px 18px;
+
+&#x20;       text-align: center;
+
+&#x20;   }}
+
+&#x20;   .metric-box .val {{
+
+&#x20;       font-size: 22px;
+
+&#x20;       font-weight: 700;
+
+&#x20;       color: var(--metric-value);
+
+&#x20;   }}
+
+&#x20;   .metric-box .lab {{
+
+&#x20;       font-size: 12px;
+
+&#x20;       color: var(--metric-label);
+
+&#x20;       text-transform: uppercase;
+
+&#x20;       letter-spacing: 0.5px;
+
+&#x20;   }}
+
+&#x20;   .log-banner {{
+
+&#x20;       background: linear-gradient(90deg, {PRIMARY} 0%, #55519e 55%, #cfcfe6 100%);
+
+&#x20;       padding: 14px 20px;
+
+&#x20;       border-radius: 8px;
+
+&#x20;       color: white;
+
+&#x20;       font-weight: 700;
+
+&#x20;       font-size: 18px;
+
+&#x20;       margin-bottom: 14px;
+
+&#x20;   }}
+
+&#x20;   footer {{visibility: hidden;}}
+
+
+
+&#x20;   /\* Extra shrink on very narrow (phone) screens \*/
+
+&#x20;   @media (max-width: 400px) {{
+
+&#x20;       section\[data-testid="stSidebar"] img {{
+
+&#x20;           max-width: 150px !important;
+
+&#x20;       }}
+
+&#x20;       section\[data-testid="stSidebar"] div.stButton > button {{
+
+&#x20;           max-width: 150px !important;
+
+&#x20;           margin: 0 !important;
+
+&#x20;           font-size: 12px;
+
+&#x20;           padding: 0.35em 0.6em;
+
+&#x20;       }}
+
+&#x20;   }}
+
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
