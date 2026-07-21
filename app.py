@@ -491,9 +491,18 @@ with col_form:
 
     with tab_camera:
         camera_file = st.camera_input(
-            "Capture side-view photo (Hold device horizontally for landscape)",
+            "Capture side-view photo",
             key=f"camera_{st.session_state.form_version}",
         )
+        if camera_file is not None:
+            cam_bytes = np.frombuffer(camera_file.getvalue(), np.uint8)
+            cam_img = cv2.imdecode(cam_bytes, cv2.IMREAD_COLOR)
+            if cam_img is not None:
+                h_c, w_c = cam_img.shape[:2]
+                if h_c > w_c:
+                    cam_img = cv2.rotate(cam_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
+                st.caption("📷 Rotated Landscape Image:")
+                st.image(cv2.cvtColor(cam_img, cv2.COLOR_BGR2RGB), use_container_width=True)
 
     selected_image_file = uploaded_file or camera_file
 
