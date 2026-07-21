@@ -66,6 +66,22 @@ CUSTOM_CSS = f"""
     }}
 
     /* --------------------------------------------------------------------
+       Full Screen Mobile Camera Viewport Styling
+       -------------------------------------------------------------------- */
+    @media (max-width: 767px) {{
+        [data-testid="stCameraInput"] {{
+            width: 100% !important;
+        }}
+        [data-testid="stCameraInput"] video,
+        [data-testid="stCameraInput"] canvas {{
+            width: 100% !important;
+            height: 68vh !important;
+            object-fit: cover !important;
+            border-radius: 12px;
+        }}
+    }}
+
+    /* --------------------------------------------------------------------
        Sidebar background — pinned on every wrapper Streamlit might use for
        the sidebar panel, with a hard fallback color (not just the CSS
        variable) so it can never resolve to the browser's transparent
@@ -494,15 +510,6 @@ with col_form:
             "Capture side-view photo",
             key=f"camera_{st.session_state.form_version}",
         )
-        if camera_file is not None:
-            cam_bytes = np.frombuffer(camera_file.getvalue(), np.uint8)
-            cam_img = cv2.imdecode(cam_bytes, cv2.IMREAD_COLOR)
-            if cam_img is not None:
-                h_c, w_c = cam_img.shape[:2]
-                if h_c > w_c:
-                    cam_img = cv2.rotate(cam_img, cv2.ROTATE_90_COUNTERCLOCKWISE)
-                st.caption("📷 Rotated Landscape Image:")
-                st.image(cv2.cvtColor(cam_img, cv2.COLOR_BGR2RGB), use_container_width=True)
 
     selected_image_file = uploaded_file or camera_file
 
