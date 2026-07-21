@@ -1,6 +1,4 @@
 """
-app.py
-==============================================================================
 Cattle Weight Estimation — Streamlit Web App
 ------------------------------------------------------------------------------
 Workflow:
@@ -52,7 +50,6 @@ LOG_COLUMNS = [
 ]
 
 PRIMARY = "#2A2866"
-BACKGROUND = "#FFFFFF"
 
 st.set_page_config(
     page_title="Cattle Weight Estimator",
@@ -63,15 +60,13 @@ st.set_page_config(
 
 CUSTOM_CSS = f"""
 <style>
-    .stApp {{
-        background-color: {BACKGROUND};
-    }}
+    /* Use Streamlit CSS variables so colors adapt automatically to dark & light modes */
     h1, h2, h3 {{
-        color: {PRIMARY};
+        color: var(--text-color);
     }}
     section[data-testid="stSidebar"] {{
-        background-color: #F4F3FA;
-        border-right: 1px solid #DDDCEF;
+        background-color: var(--secondary-background-color);
+        border-right: 1px solid rgba(128, 128, 128, 0.2);
     }}
     /* Sidebar logo — fixed, modest size on every device, left-aligned so
        it lines up with the rest of the sidebar content (button, caption). */
@@ -90,10 +85,7 @@ CUSTOM_CSS = f"""
     }}
     /* Sidebar buttons — capped to same width as the logo, regardless of
        sidebar width, and left-aligned (not centered) so it lines up with
-       the logo above it instead of floating in the middle. The !important
-       on max-width overrides the inline width:100% that
-       use_container_width=True injects, so the button can never grow
-       past the logo's width even if the sidebar is dragged wider. */
+       the logo above it instead of floating in the middle. */
     section[data-testid="stSidebar"] div.stButton {{
         display: flex !important;
         justify-content: flex-start !important;
@@ -134,8 +126,8 @@ CUSTOM_CSS = f"""
         color: white;
     }}
     div.stDownloadButton > button {{
-        background-color: white;
-        color: {PRIMARY};
+        background-color: transparent;
+        color: var(--text-color);
         border: 1.5px solid {PRIMARY};
         border-radius: 8px;
         font-weight: 600;
@@ -146,7 +138,7 @@ CUSTOM_CSS = f"""
     }}
     .weight-card {{
         background: linear-gradient(135deg, {PRIMARY} 0%, #46418f 100%);
-        color: white;
+        color: #FFFFFF !important;
         border-radius: 16px;
         padding: 28px 32px;
         text-align: center;
@@ -157,16 +149,18 @@ CUSTOM_CSS = f"""
         font-size: 52px;
         font-weight: 800;
         line-height: 1.1;
+        color: #FFFFFF !important;
     }}
     .weight-card .label {{
         font-size: 15px;
         letter-spacing: 1px;
         text-transform: uppercase;
         opacity: 0.85;
+        color: #FFFFFF !important;
     }}
     .metric-box {{
-        background-color: #F4F3FA;
-        border: 1px solid #DDDCEF;
+        background-color: var(--secondary-background-color);
+        border: 1px solid rgba(128, 128, 128, 0.2);
         border-radius: 10px;
         padding: 14px 18px;
         text-align: center;
@@ -174,11 +168,12 @@ CUSTOM_CSS = f"""
     .metric-box .val {{
         font-size: 22px;
         font-weight: 700;
-        color: {PRIMARY};
+        color: var(--text-color);
     }}
     .metric-box .lab {{
         font-size: 12px;
-        color: #555;
+        color: var(--text-color);
+        opacity: 0.7;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }}
@@ -233,12 +228,7 @@ if st.session_state.logs_df is None:
     else:
         st.session_state.logs_df = pd.DataFrame(columns=LOG_COLUMNS)
 
-# ── Scroll-to-top: runs once, right after a reset, before content renders ──
-# Uses a short retry loop (instead of a single scrollTo call) because on
-# mobile the page can still be reflowing (keyboard closing, image/result
-# panel collapsing, etc.) right after rerun, which would silently swallow
-# a single immediate scroll attempt. Retrying for ~1.5s makes it land
-# reliably on both desktop and mobile.
+# ── Scroll-to-top ──
 if st.session_state.scroll_to_top:
     components.html(
         """
@@ -251,8 +241,6 @@ if st.session_state.scroll_to_top:
                     if (anchor && anchor.scrollIntoView) {
                         anchor.scrollIntoView({behavior: 'auto', block: 'start', inline: 'nearest'});
                     }
-                    // Belt-and-braces: also try every plausible scroll owner directly,
-                    // in case scrollIntoView didn't fully resolve on this render pass.
                     var targets = [
                         doc.querySelector('[data-testid="stAppViewContainer"]'),
                         doc.querySelector('[data-testid="stMainBlockContainer"]'),
@@ -288,7 +276,7 @@ if st.session_state.scroll_to_top:
 
 
 # ==============================================================================
-# Model loading (cached — downloads on first run only)
+# Model loading
 # ==============================================================================
 @st.cache_resource(show_spinner=False)
 def get_models():
@@ -306,10 +294,7 @@ def get_models():
 # Helpers
 # ==============================================================================
 def reset_form():
-    """Fully clears Tag ID + uploaded image + current result, then scrolls to top.
-    Uses a fresh widget key (form_version bump) for BOTH the Tag ID field and
-    the file uploader, which is the most reliable way to blank a widget in
-    Streamlit (more reliable than popping session_state for a fixed key)."""
+    """Fully clears Tag ID + uploaded image + current result, then scrolls to top."""
     st.session_state.form_version += 1
     st.session_state.estimation_done = False
     st.session_state.last_annotated_img = None
@@ -323,8 +308,8 @@ def reset_form():
 def render_measurement_table_html(measurements: dict) -> str:
     rows_html = "".join(
         f"<tr>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;color:{PRIMARY};font-weight:600;'>{k}</td>"
-        f"<td style='padding:9px 14px;border-bottom:1px solid #eee;'>{v}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid rgba(128,128,128,0.2);color:var(--text-color);font-weight:600;'>{k}</td>"
+        f"<td style='padding:9px 14px;border-bottom:1px solid rgba(128,128,128,0.2);color:var(--text-color);'>{v}</td>"
         f"</tr>"
         for k, v in measurements.items()
     )
@@ -435,7 +420,7 @@ with st.sidebar:
     if os.path.exists(LOGO_PATH):
         st.image(LOGO_PATH, width=130)
     else:
-        st.markdown(f"<h3 style='color:{PRIMARY};'>🐄 CattleWeigh</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3>🐄 CattleWeigh</h3>", unsafe_allow_html=True)
         st.caption("Drop your logo at `assets/logo.png` to replace this placeholder.")
 
     st.markdown("---")
@@ -448,8 +433,6 @@ with st.sidebar:
 # ==============================================================================
 # Main content
 # ==============================================================================
-# Anchor used by the scroll-to-top script below — scrollIntoView on a real
-# element is more reliable than guessing which container is scrollable.
 st.markdown('<div id="page-top"></div>', unsafe_allow_html=True)
 st.markdown("<h1>🐄 Cattle Weight Estimator</h1>", unsafe_allow_html=True)
 st.caption("Upload a side-view image to estimate live body weight from Body Length and Heart Girth.")
@@ -481,7 +464,7 @@ with col_form:
     estimate_clicked = st.button("🔍 Estimate Weight", use_container_width=True)
 
 # ==============================================================================
-# Run estimation (writes results into session_state)
+# Run estimation
 # ==============================================================================
 if estimate_clicked:
     if not tag_id.strip():
@@ -540,7 +523,7 @@ if estimate_clicked:
                     st.rerun()
 
 # ==============================================================================
-# Result panel (persists across reruns, e.g. when dialogs open)
+# Result panel
 # ==============================================================================
 with col_result:
     st.subheader("Result")
