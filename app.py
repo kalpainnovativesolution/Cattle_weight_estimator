@@ -16,20 +16,6 @@ Workflow:
   6. Sidebar "View All Logs" button opens a dialog listing every past
      measurement as an expandable card per Tag ID + timestamp, with an
      "Download Excel" button for the full log.
-
-------------------------------------------------------------------------------
-# ==== GOOGLE SHEETS LOGGING BACKEND — MODIFIED SECTION ======================
-Logging no longer writes to a local CSV file (which is wiped on every
-Streamlit Community Cloud restart). Instead, all logs are stored in a
-Google Sheet via a Google Apps Script Web App that is called over plain
-HTTP — no Google service-account credentials, JSON key files, or
-secrets.toml are required.
-
-    Streamlit App  --HTTP POST-->  Google Apps Script Web App  --> Google Sheet
-    Streamlit App  --HTTP GET -->  Google Apps Script Web App  <-- Google Sheet
-
-Only ONE thing needs to be configured: the WEB_APP_URL constant below.
-See the accompanying deployment instructions for how to obtain it.
 ==============================================================================
 """
 
@@ -40,7 +26,6 @@ from io import BytesIO
 import cv2
 import numpy as np
 import pandas as pd
-import requests  # ==== MODIFIED: added for Google Apps Script HTTP calls ====
 import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
@@ -57,12 +42,7 @@ from utils import (
 # Page config + branding
 # ==============================================================================
 LOGO_PATH = "assets/logo.png"
-
-# ==== MODIFIED: local CSV log path removed, replaced by Google Apps Script ===
-# LOGS_PATH = "logs/cattle_weight_logs.csv"   # (no longer used)
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyuxEnPufC9nHXrBWEQcyjKSEnxypkvXJsQGuVw8tj0a-3dI2bJ-xsoY1yF49pkCIPn/exec"
-# ==============================================================================
-
+LOGS_PATH = "logs/cattle_weight_logs.csv"
 LOG_COLUMNS = [
     "Tag_ID", "Date", "Time",
     "Linear_Body_Depth_cm", "Linear_Chest_Height_cm",
@@ -269,140 +249,12 @@ for key, default in DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
-
-# ==============================================================================
-# ==== GOOGLE SHEETS LOGGING HELPERS — NEW / MODIFIED SECTION =================
-# These three functions are the only pieces that replace the old CSV logic.
-# Nothing else in the file depends on *how* logs are stored, only on
-# st.session_state.logs_df being a DataFrame with LOG_COLUMNS — so the rest
-# of the app (dialogs, search, Excel download, sidebar count) is untouched.
-# ==============================================================================
-def append_log_to_google_sheet(row_dict: dict) -> bool:
-    """
-    Sends a single new log row to the Google Apps Script Web App, which
-    appends it as a new row in the Google Sheet (never overwriting existing
-    data). Returns True on confirmed success, False otherwise.
-    """
-    if not WEB_APP_URL or "xxxxxxxxxxxxxxxxxxxxxxxx" in WEB_APP_URL:
-        st.error(
-            "⚠ Google Sheet logging is not configured yet. "
-            "Please set WEB_APP_URL to your deployed Apps Script Web App URL."
-        )
-        return False
-
-    try:
-        response = requests.post(WEB_APP_URL, json=row_dict, timeout=15)
-        response.raise_for_status()
-        result = response.json()
-
-        if isinstance(result, dict) and result.get("status") == "success":
-            return True
-
-        st.warning(
-            "⚠ The Google Sheet did not confirm the write: "
-            f"{result.get('message', 'Unknown error') if isinstance(result, dict) else result}"
-        )
-        return False
-
-    except requests.exceptions.ConnectionError:
-        st.error("⚠ Could not reach Google Sheets — please check your internet connection.")
-    except requests.exceptions.Timeout:
-        st.error("⚠ The request to Google Sheets timed out. Please try again.")
-    except requests.exceptions.HTTPError as e:
-        st.error(f"⚠ Google Apps Script returned an HTTP error: {e}")
-    except ValueError:
-        st.error("⚠ Received an invalid (non-JSON) response from the Web App URL.")
-    except requests.exceptions.RequestException as e:
-        st.error(f"⚠ Network error while logging to Google Sheets: {e}")
-    except Exception as e:
-        st.error(f"⚠ Unexpected error while logging to Google Sheets: {e}")
-
-    return False
-
-
-def load_logs_from_google_sheet() -> pd.DataFrame:
-    """
-    Fetches every logged row from the Google Sheet via an HTTP GET to the
-    Apps Script Web App. Returns an empty (but correctly-columned)
-    DataFrame if the sheet has no data yet, the URL is invalid, or a
-    network/parsing error occurs — mirroring the old "empty CSV" behavior.
-    """
-    empty_df = pd.DataFrame(columns=LOG_COLUMNS)
-
-    if not WEB_APP_URL or "xxxxxxxxxxxxxxxxxxxxxxxx" in WEB_APP_URL:
-        st.error(
-            "⚠ Google Sheet logging is not configured yet. "
-            "Please set WEB_APP_URL to your deployed Apps Script Web App URL."
-        )
-        return empty_df
-
-    try:
-        response = requests.get(WEB_APP_URL, timeout=15)
-        response.raise_for_status()
-        records = response.json()
-
-        # Apps Script-side error surfaced as {"error": "..."}
-        if isinstance(records, dict) and "error" in records:
-            st.error(f"⚠ Google Apps Script error: {records['error']}")
-            return empty_df
-
-        # Empty sheet -> Apps Script returns [] -> behave like empty CSV
-        if not isinstance(records, list) or len(records) == 0:
-            return empty_df
-
-        df = pd.DataFrame(records)
-
-        # Guarantee every expected column exists, in the expected order,
-        # even if the sheet has extra/missing/reordered columns.
-        for col in LOG_COLUMNS:
-            if col not in df.columns:
-                df[col] = None
-        df = df[LOG_COLUMNS]
-
-        numeric_cols = [
-            "Linear_Body_Depth_cm", "Linear_Chest_Height_cm",
-            "Body_Length_cm", "Heart_Girth_cm", "Weight_kg",
-        ]
-        for col in numeric_cols:
-            df[col] = pd.to_numeric(df[col], errors="coerce")
-
-        return df
-
-    except requests.exceptions.ConnectionError:
-        st.error("⚠ Could not reach Google Sheets — please check your internet connection.")
-    except requests.exceptions.Timeout:
-        st.error("⚠ The request to Google Sheets timed out. Please try again.")
-    except requests.exceptions.HTTPError as e:
-        st.error(f"⚠ Google Apps Script returned an HTTP error: {e}")
-    except ValueError:
-        st.error("⚠ Received an invalid (non-JSON) response from the Web App URL.")
-    except requests.exceptions.RequestException as e:
-        st.error(f"⚠ Network error while loading logs from Google Sheets: {e}")
-    except Exception as e:
-        st.error(f"⚠ Unexpected error while loading logs from Google Sheets: {e}")
-
-    return empty_df
-
-
-def get_logs_dataframe(force_refresh: bool = False) -> pd.DataFrame:
-    """
-    Returns the current logs DataFrame. Fetches fresh data from the Google
-    Sheet on first use, or whenever force_refresh=True (used right before
-    the "View All Logs" dialog is shown, so it's always up to date across
-    multiple users/sessions); otherwise returns the cached copy already in
-    session_state.
-    """
-    if force_refresh or st.session_state.logs_df is None:
-        st.session_state.logs_df = load_logs_from_google_sheet()
-    return st.session_state.logs_df
-# ==== END GOOGLE SHEETS LOGGING HELPERS ======================================
-
-
-# ==== MODIFIED: initial log load now comes from the Google Sheet, not CSV ====
 if st.session_state.logs_df is None:
-    with st.spinner("Loading logs from Google Sheet..."):
-        get_logs_dataframe()
-# ==============================================================================
+    os.makedirs("logs", exist_ok=True)
+    if os.path.exists(LOGS_PATH):
+        st.session_state.logs_df = pd.read_csv(LOGS_PATH)
+    else:
+        st.session_state.logs_df = pd.DataFrame(columns=LOG_COLUMNS)
 
 # ── Scroll-to-top ──
 if st.session_state.scroll_to_top:
@@ -546,11 +398,7 @@ def show_logs_dialog():
         unsafe_allow_html=True,
     )
 
-    # ==== MODIFIED: always pull the latest data from the Google Sheet here,
-    # so logs added by other users/sessions are reflected immediately. ====
-    with st.spinner("Refreshing logs from Google Sheet..."):
-        df = get_logs_dataframe(force_refresh=True)
-    # ==========================================================================
+    df = st.session_state.logs_df
 
     top_l, top_r = st.columns([2, 1])
     with top_l:
@@ -628,7 +476,7 @@ with col_form:
     )
 
     st.subheader("2. Side-View Image")
-
+    
     tab_upload, tab_camera = st.tabs(["📁 Upload Image", "📷 Take Photo"])
 
     uploaded_file = None
@@ -722,29 +570,12 @@ if estimate_clicked:
                         "Heart_Girth_cm": round(traits["heart_girth_cm"], 2) if traits["heart_girth_cm"] else None,
                         "Weight_kg": round(traits["weight_kg"], 2) if traits["weight_kg"] else None,
                     }
-
-                    # ==== MODIFIED: log persistence now goes to the Google Sheet
-                    # via the Apps Script Web App instead of a local CSV file. ====
-                    with st.spinner("Saving log to Google Sheet..."):
-                        log_saved = append_log_to_google_sheet(new_row)
-
-                    # Reflect the new row locally right away so the sidebar count
-                    # and any immediately-reopened "View All Logs" dialog feel
-                    # instantaneous; show_logs_dialog() will still re-fetch the
-                    # authoritative copy from the sheet the next time it opens.
                     st.session_state.logs_df = pd.concat(
                         [st.session_state.logs_df, pd.DataFrame([new_row])],
                         ignore_index=True,
                     )
-
-                    if not log_saved:
-                        st.warning(
-                            "The weight was estimated successfully, but this result "
-                            "could not be saved to the Google Sheet log — it will not "
-                            "persist once the app restarts. Please check your "
-                            "WEB_APP_URL / internet connection."
-                        )
-                    # ==============================================================
+                    os.makedirs("logs", exist_ok=True)
+                    st.session_state.logs_df.to_csv(LOGS_PATH, index=False)
 
                     st.rerun()
 
