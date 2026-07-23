@@ -60,7 +60,7 @@ LOGO_PATH = "assets/logo.png"
 
 # ==== MODIFIED: local CSV log path removed, replaced by Google Apps Script ===
 # LOGS_PATH = "logs/cattle_weight_logs.csv"   # (no longer used)
-WEB_APP_URL = "https://docs.google.com/spreadsheets/d/1TKheqDtxtEJx-3jfZjL1NEmBRU3EWW75XAz00eZKius/edit?usp=sharing"
+WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyuxEnPufC9nHXrBWEQcyjKSEnxypkvXJsQGuVw8tj0a-3dI2bJ-xsoY1yF49pkCIPn/exec"
 # ==============================================================================
 
 LOG_COLUMNS = [
